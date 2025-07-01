@@ -75,10 +75,19 @@ function App() {
   }, [messages]);
 
   const handleSend = async () => {
-    setIsLoading(true);
-    setMessage('');
+    const id = Date.now(); // або uuid
 
     const payload = { brand, model, vin, year: Number(year), message };
+
+    const newMessage = {
+      id,
+      ...payload,
+      response: null, // поки що нема
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setMessage('');
+    setIsLoading(true);
 
     try {
       const res = await axios.post(
@@ -94,10 +103,13 @@ function App() {
 
       console.log('Response from chat:', res.data);
 
-      setMessages(prev => [...prev, { ...payload, response: res.data }]); // показуємо у чаті
-      setIsLoading(false);
+      setMessages(prev =>
+        prev.map(msg => (msg.id === id ? { ...msg, response: res.data } : msg))
+      );
     } catch (error) {
       console.error('Send error:', error.response?.data || error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -144,7 +156,7 @@ function App() {
         <div className={css.chatContainer}>
           <div className={css.chatWindow} ref={chatRef}>
             {messages.map((msg, idx) => (
-              <div key={idx} className={css.messageBlock}>
+              <div key={msg.id || idx} className={css.messageBlock}>
                 <div className={css.userMessage}>
                   <strong>Ваше повідомлення:</strong>
                   <br />
@@ -158,14 +170,17 @@ function App() {
                   <br />
                   Message: {msg.message}
                 </div>
-                <div className={css.aiMessage}>
-                  <strong>AI:</strong>
-                  <br />
-                  {msg.response}
-                </div>
+                {msg.response ? (
+                  <div className={css.aiMessage}>
+                    <strong>AI:</strong>
+                    <br />
+                    {msg.response}
+                  </div>
+                ) : (
+                  <div className={css.loading}>Завантаження...</div>
+                )}
               </div>
             ))}
-            {isLoading && <div className={css.loading}>Завантаження...</div>}
           </div>
           <div className={css.chatInputContainer}>
             <div className={css.carDataInputsWrapper}>
